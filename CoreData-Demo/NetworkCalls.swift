@@ -61,6 +61,7 @@ func syncPerson(json: JSON) {
         }
     }
     
+    populateIds()
     // Insert the rocord
     func insertRecord(item: JSON, context: NSManagedObjectContext) {
         let entity = NSEntityDescription.entity(forEntityName: "Person", in: context)
@@ -166,7 +167,6 @@ func syncPerson(json: JSON) {
             print("Can't fetch the result.")
         }
     }
-    
     deleteRecord()
 }
 
