@@ -53,6 +53,34 @@ class NetworkCalls: NSObject {
         // 3. Id variable
         var ids = [String]()
         
+        // 1. Get hold of the context
+        let context = appDelegate.managedObjectContext!
+        
+        func populateIds() {
+            let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "Person")
+            fetchRequest.propertiesToFetch = ["id"]
+            fetchRequest.resultType = NSFetchRequestResultType.dictionaryResultType
+            
+            func parseDictonary(result: [Any]?) {
+                if let results = result {
+                    for item in results {
+                        if let dict = item as? [String: Any] {
+                            let id = dict["id"] as? String ?? ""
+                            ids.append(id)
+                        }
+                    }
+                }
+            }
+            
+            do {
+                let result = try context.fetch(fetchRequest)
+                parseDictonary(result: result)
+                //            parseModel(result: result)
+            } catch {
+                print(error.localizedDescription)
+            }
+        }
+        
         // Insert the rocord
         func insertRecord(item: JSON, context: NSManagedObjectContext) {
             let entity = NSEntityDescription.entity(forEntityName: "Person", in: context)
@@ -64,13 +92,13 @@ class NetworkCalls: NSObject {
             person.username = item["username"].string ?? ""
             person.phone = item["phone"].string ?? ""
             
-            ids.append("\(item["id"].int ?? 0)")
-            
-            do {
-                try context.save()
-                print("Inserted the object with id: \(person.id!)")
-            } catch {
-                print(error.localizedDescription)
+            if context.hasChanges {
+                do {
+                    try context.save()
+                    print("Inserted the object with id: \(person.id!)")
+                } catch {
+                    print(error.localizedDescription)
+                }
             }
         }
         
@@ -88,15 +116,21 @@ class NetworkCalls: NSObject {
                 person_update?.username = item["username"].string ?? ""
                 person_update?.phone = item["phone"].string ?? ""
                 
-                ids.append(id)
-                
-                do {
-                    try context.save()
-                    print("Updated the object with id \(id)")
-                } catch {
-                    print("Failed to update the object with id \(id)")
+                for (index, value) in ids.enumerated() {
+                    if value == id {
+                        ids.remove(at: index)
+                        break
+                    }
                 }
                 
+                if context.hasChanges {
+                    do {
+                        try context.save()
+                        print("Updated the object with id \(id)")
+                    } catch {
+                        print("Failed to update the object with id \(id)")
+                    }
+                }
             } catch {
                 print("Failed to fetch the object with id: \(id)")
             }
@@ -104,16 +138,35 @@ class NetworkCalls: NSObject {
         
         // delete the records
         func deleteRecord() {
+            func delete(id: String) {
+                let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "Person")
+                fetchRequest.predicate = NSPredicate(format: "id = %@", id)
+                let context = appDelegate.managedObjectContext
+                
+                if let result = try? context?.fetch(fetchRequest) {
+                    for object in result! {
+                        context?.delete(object as! NSManagedObject)
+                        print("Deleted the record with id: \(id)")
+                    }
+                }
+                
+                if (context?.hasChanges)! {
+                    do {
+                        try context?.save()
+                        print("Deleted records with Ids: \(ids)")
+                    } catch {
+                        print("Failed to delete the object.")
+                    }
+                }
+            }
             
+            for id in ids {
+                delete(id: id)
+            }
         }
-        
-        // 1. Get hold of the context
-        let context = appDelegate.managedObjectContext!
         
         // 2. parse the json
         let result = json.arrayValue
-        
-        
         
         for item in result {
             let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "Person")
@@ -131,6 +184,8 @@ class NetworkCalls: NSObject {
                 print("Can't fetch the result.")
             }
         }
+        
+        deleteRecord()
     }
     
     func syncRecords(id: String, item: JSON, context: NSManagedObjectContext, count: Int) {

@@ -32,12 +32,14 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
+//        self.printRecords()
+//        NetworkCalls.instance.getJson { (response) in
+//            if response["errorcode"] as! Int == 200 {
+//                self.printRecords()
+//            }
+//        }
+        
         self.printRecords()
-        NetworkCalls.instance.getJson { (response) in
-            if response["errorcode"] as! Int == 200 {
-                self.printRecords()
-            }
-        }
     }
     
     @IBAction func deleteRec(_ sender: Any) {
@@ -92,6 +94,8 @@ class ViewController: UIViewController {
     
     func printRecords() {
         let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "Person")
+        fetchRequest.propertiesToFetch = ["id"]
+        fetchRequest.resultType = NSFetchRequestResultType.dictionaryResultType
         let context = appDelegate.managedObjectContext
         
         func parseModel(result: [Any]?) {
@@ -106,9 +110,20 @@ class ViewController: UIViewController {
             }
         }
         
+        func parseDictonary(result: [Any]?) {
+            if let results = result {
+                for item in results {
+                    if let dict = item as? [String: Any] {
+                        print(dict["id"] as! String)
+                    }
+                }
+            }
+        }
+        
         do {
             let result = try context?.fetch(fetchRequest)
-            parseModel(result: result)
+            parseDictonary(result: result)
+            //            parseModel(result: result)
         } catch {
             print(error.localizedDescription)
         }

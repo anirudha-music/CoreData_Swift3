@@ -7,7 +7,7 @@
         <attribute name="phone" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="username" optional="YES" attributeType="String" syncable="YES"/>
     </entity>
-    <fetchRequest name="PersonAll" entity="Person"/>
+    <fetchRequest name="PersonAll" entity="Person" predicateString="id CONTAINS &quot;&quot;"/>
     <elements>
         <element name="Person" positionX="-63" positionY="-18" width="128" height="120"/>
     </elements>
