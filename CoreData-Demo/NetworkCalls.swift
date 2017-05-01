@@ -98,6 +98,9 @@ func syncPerson(json: JSON) {
             person_update?.phone = item["phone"].string ?? ""
             
             for (index, value) in ids.enumerated() {
+//                if value == "5" {
+//                    continue
+//                }
                 if value == id {
                     ids.remove(at: index)
                     break
@@ -122,18 +125,17 @@ func syncPerson(json: JSON) {
         func delete(id: String) {
             let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "Person")
             fetchRequest.predicate = NSPredicate(format: "id = %@", id)
-            let context = appDelegate.managedObjectContext
             
-            if let result = try? context?.fetch(fetchRequest) {
-                for object in result! {
-                    context?.delete(object as! NSManagedObject)
+            if let result = try? context.fetch(fetchRequest) {
+                for object in result {
+                    context.delete(object as! NSManagedObject)
                     print("Deleted the record with id: \(id)")
                 }
             }
             
-            if (context?.hasChanges)! {
+            if context.hasChanges {
                 do {
-                    try context?.save()
+                    try context.save()
                     print("Deleted records with Ids: \(ids)")
                 } catch {
                     print("Failed to delete the object.")
