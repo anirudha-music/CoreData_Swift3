@@ -33,12 +33,15 @@ class ViewController: UIViewController {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
         self.printRecords()
-//        NetworkCalls.instance.getJson { (response) in
-//            if response["errorcode"] as! Int == 200 {
-//                self.printRecords()
-//            }
-//        }
-//        deleteRecord()
+        NetworkCalls.instance.getJson { (response) in
+            if response["errorcode"] as! Int == 200 {
+                self.printRecords()
+            }
+        }
+    }
+    
+    @IBAction func deleteRec(_ sender: Any) {
+        deleteRecord()
     }
     
     func fetchRequest() {

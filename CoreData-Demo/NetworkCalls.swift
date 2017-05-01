@@ -24,6 +24,10 @@ class NetworkCalls: NSObject {
             if let json = response.result.value {
                 let result = json.arrayValue
                 
+                let ids = result.map {
+                    $0["id"].string ?? ""
+                }
+                
                 let context = appDelegate.managedObjectContext
                 for item in result {
                     
@@ -32,14 +36,10 @@ class NetworkCalls: NSObject {
                     
                     let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "Person")
                     fetchRequest.predicate = NSPredicate(format: "id = %@", id)
-                    
+                    fetchRequest.resultType = NSFetchRequestResultType.countResultType
                     do {
-                        let count = try context?.fetch(fetchRequest)
-                        if count?.count == 0 {
-                            self.insertRecord(item: item, context: context!)
-                        } else {
-                            self.updateRecord(id: id, item: item, context: context!)
-                        }
+                        let count = try context?.fetch(fetchRequest) as! [Int]
+                        self.syncRecords(id: id, item: item, context: context!, count: count[0])
                     } catch {
                         print("Can't fetch the result.")
                     }
@@ -49,48 +49,56 @@ class NetworkCalls: NSObject {
         }
     }
     
-    // Insert the record
-    func insertRecord(item: JSON, context: NSManagedObjectContext) {
-        let entity = NSEntityDescription.entity(forEntityName: "Person", in: context)
-        let person = NSManagedObject(entity: entity!, insertInto: context) as! Person
-        
-        person.id = "\(item["id"].int ?? 0)"
-        person.email = item["email"].string ?? ""
-        person.name = item["name"].string ?? ""
-        person.username = item["username"].string ?? ""
-        person.phone = item["phone"].string ?? ""
-        
-        do {
-            try context.save()
-            print("Inserted the object with id: \(person.id!)")
-        } catch {
-            print(error.localizedDescription)
-        }
-    }
-    
-    // Update the record
-    func updateRecord(id: String, item: JSON, context: NSManagedObjectContext) {
-        let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "Person")
-        fetchRequest.predicate = NSPredicate(format: "id = %@", id)
-        
-        do {
-            let result = try context.fetch(fetchRequest) as! [Person]
-            let person_update = result.first
+    func syncRecords(id: String, item: JSON, context: NSManagedObjectContext, count: Int) {
+        // Insert the record
+        func insertRecord(item: JSON, context: NSManagedObjectContext) {
+            let entity = NSEntityDescription.entity(forEntityName: "Person", in: context)
+            let person = NSManagedObject(entity: entity!, insertInto: context) as! Person
             
-            person_update?.email = item["email"].string ?? ""
-            person_update?.name = item["name"].string ?? ""
-            person_update?.username = item["username"].string ?? ""
-            person_update?.phone = item["phone"].string ?? ""
+            person.id = "\(item["id"].int ?? 0)"
+            person.email = item["email"].string ?? ""
+            person.name = item["name"].string ?? ""
+            person.username = item["username"].string ?? ""
+            person.phone = item["phone"].string ?? ""
             
             do {
                 try context.save()
-                print("Updated the object with id \(id)")
+                print("Inserted the object with id: \(person.id!)")
             } catch {
-                print("Failed to update the object with id \(id)")
+                print(error.localizedDescription)
             }
+        }
+        
+        // Update the record
+        func updateRecord(id: String, item: JSON, context: NSManagedObjectContext) {
+            let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "Person")
+            fetchRequest.predicate = NSPredicate(format: "id = %@", id)
             
-        } catch {
-            print("Failed to fetch the object with id: \(id)")
+            do {
+                let result = try context.fetch(fetchRequest) as! [Person]
+                let person_update = result.first
+                
+                person_update?.email = item["email"].string ?? ""
+                person_update?.name = item["name"].string ?? ""
+                person_update?.username = item["username"].string ?? ""
+                person_update?.phone = item["phone"].string ?? ""
+                
+                do {
+                    try context.save()
+                    print("Updated the object with id \(id)")
+                } catch {
+                    print("Failed to update the object with id \(id)")
+                }
+                
+            } catch {
+                print("Failed to fetch the object with id: \(id)")
+            }
+        }
+        
+        if count == 0 {
+            insertRecord(item: item, context: context)
+        } else {
+            updateRecord(id: id, item: item, context: context)
         }
     }
 }
